@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ROLL — 메타데이터 뷰어</title>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.js"></script>
+
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500&display=swap');
 
@@ -15,14 +17,22 @@
     --amber:#e0983a;
     --amber-dim:#8a6229;
     --red:#c1443a;
-    --line: rgba(241,235,221,0.14);
-    --mono: 'Space Mono', monospace;
-    --disp: 'Oswald', sans-serif;
-    --body: 'Inter', sans-serif;
+    --line:rgba(241,235,221,0.14);
+    --mono:'Space Mono', monospace;
+    --disp:'Oswald', sans-serif;
+    --body:'Inter', sans-serif;
   }
 
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{margin:0;padding:0;}
+  *{
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  html,body{
+    margin:0;
+    padding:0;
+  }
+
   body{
     background:var(--ink);
     color:var(--paper);
@@ -31,149 +41,470 @@
     overflow-x:hidden;
   }
 
+  button,
+  input{
+    font:inherit;
+  }
+
+  button:disabled{
+    cursor:not-allowed;
+    opacity:.55;
+  }
+
   /* film sprocket texture along edges */
   .sprockets{
-    position:fixed; top:0; bottom:0; width:22px; z-index:5; pointer-events:none;
-    background-image: repeating-linear-gradient(180deg, transparent 0 10px, var(--ink) 10px 11px),
-                       repeating-linear-gradient(180deg, #0000 0 18px, #000 18px 30px);
-    opacity:0.9;
+    position:fixed;
+    top:0;
+    bottom:0;
+    width:22px;
+    z-index:5;
+    pointer-events:none;
+    background-image:
+      repeating-linear-gradient(
+        180deg,
+        transparent 0 10px,
+        var(--ink) 10px 11px
+      ),
+      repeating-linear-gradient(
+        180deg,
+        #0000 0 18px,
+        #000 18px 30px
+      );
+    opacity:.9;
   }
-  .sprockets.left{ left:0; border-right:1px solid var(--line);}
-  .sprockets.right{ right:0; border-left:1px solid var(--line);}
+
+  .sprockets.left{
+    left:0;
+    border-right:1px solid var(--line);
+  }
+
+  .sprockets.right{
+    right:0;
+    border-left:1px solid var(--line);
+  }
+
   .sprockets span{
-    position:absolute; left:4px; width:14px; height:10px; background:var(--ink);
-    border:1px solid rgba(241,235,221,0.25); border-radius:2px;
+    position:absolute;
+    left:4px;
+    width:14px;
+    height:10px;
+    background:var(--ink);
+    border:1px solid rgba(241,235,221,.25);
+    border-radius:2px;
   }
 
   .wrap{
-    max-width:900px; margin:0 auto; padding:56px 40px 100px;
-    position:relative; z-index:2;
+    max-width:900px;
+    margin:0 auto;
+    padding:56px 40px 100px;
+    position:relative;
+    z-index:2;
   }
-  @media (max-width:640px){ .wrap{padding:40px 20px 80px;} }
 
-  header{ margin-bottom:40px; }
+  header{
+    margin-bottom:40px;
+  }
+
   .eyebrow{
-    font-family:var(--mono); font-size:11px; letter-spacing:.28em; text-transform:uppercase;
-    color:var(--amber); display:flex; align-items:center; gap:10px; margin-bottom:14px;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    color:var(--amber);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:14px;
   }
+
   .eyebrow::before{
-    content:''; width:7px; height:7px; border-radius:50%; background:var(--red);
-    box-shadow:0 0 8px var(--red); animation:blink 1.6s ease-in-out infinite;
+    content:'';
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:var(--red);
+    box-shadow:0 0 8px var(--red);
+    animation:blink 1.6s ease-in-out infinite;
   }
-  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:.25;} }
+
+  @keyframes blink{
+    0%,100%{opacity:1;}
+    50%{opacity:.25;}
+  }
 
   h1{
-    font-family:var(--disp); font-weight:700; font-size:clamp(34px,7vw,58px);
-    margin:0 0 8px; letter-spacing:.01em; text-transform:uppercase;
+    font-family:var(--disp);
+    font-weight:700;
+    font-size:clamp(34px,7vw,58px);
+    margin:0 0 8px;
+    letter-spacing:.01em;
+    text-transform:uppercase;
     line-height:1.02;
   }
-  h1 em{ font-style:normal; color:var(--amber); }
-  .sub{ color:var(--paper-dim); font-size:15px; max-width:520px; line-height:1.6; }
+
+  h1 em{
+    font-style:normal;
+    color:var(--amber);
+  }
+
+  .sub{
+    color:var(--paper-dim);
+    font-size:15px;
+    max-width:560px;
+    line-height:1.6;
+  }
 
   /* dropzone */
   .stage{
-    margin-top:36px; border:1px solid var(--line); border-radius:2px;
-    background:
-      linear-gradient(var(--ink),var(--ink)) padding-box;
+    margin-top:36px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    background:linear-gradient(var(--ink),var(--ink)) padding-box;
     position:relative;
   }
+
   .drop{
-    position:relative; padding:70px 24px; text-align:center; cursor:pointer;
+    position:relative;
+    padding:70px 24px;
+    text-align:center;
+    cursor:pointer;
     transition:background .2s ease;
   }
-  .drop:hover, .drop.hover{ background:rgba(224,152,58,0.06); }
-  .drop .ring{
-    width:74px; height:74px; margin:0 auto 22px; position:relative;
+
+  .drop:hover,
+  .drop.hover{
+    background:rgba(224,152,58,.06);
   }
-  .drop .ring svg{ width:100%; height:100%; }
-  .drop .ring .blade{ transform-origin:37px 37px; transition:transform .3s ease; }
-  .drop:hover .ring .blade{ transform:rotate(18deg); }
+
+  .drop .ring{
+    width:74px;
+    height:74px;
+    margin:0 auto 22px;
+    position:relative;
+  }
+
+  .drop .ring svg{
+    width:100%;
+    height:100%;
+  }
+
+  .drop .ring .blade{
+    transform-origin:37px 37px;
+    transition:transform .3s ease;
+  }
+
+  .drop:hover .ring .blade{
+    transform:rotate(18deg);
+  }
 
   .drop .label{
-    font-family:var(--disp); font-size:20px; letter-spacing:.03em; text-transform:uppercase;
+    font-family:var(--disp);
+    font-size:20px;
+    letter-spacing:.03em;
+    text-transform:uppercase;
     margin-bottom:8px;
   }
-  .drop .hint{ font-family:var(--mono); font-size:12px; color:var(--paper-dim); }
-  .drop input{ display:none; }
+
+  .drop .hint{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--paper-dim);
+    line-height:1.65;
+  }
+
+  .drop input{
+    display:none;
+  }
 
   /* result view */
-  .frame{ display:none; }
-  .frame.active{ display:block; }
+  .frame{
+    display:none;
+    margin-top:28px;
+  }
+
+  .frame.active{
+    display:block;
+  }
 
   .viewfinder{
-    position:relative; border:1px solid var(--line); overflow:hidden; background:#000;
+    position:relative;
+    border:1px solid var(--line);
+    overflow:hidden;
+    background:#000;
   }
+
   .corner{
-    position:absolute; width:26px; height:26px; border-color:var(--amber); z-index:3;
+    position:absolute;
+    width:26px;
+    height:26px;
+    border-color:var(--amber);
+    z-index:3;
     opacity:.85;
   }
-  .corner.tl{ top:10px; left:10px; border-top:2px solid; border-left:2px solid; }
-  .corner.tr{ top:10px; right:10px; border-top:2px solid; border-right:2px solid; }
-  .corner.bl{ bottom:10px; left:10px; border-bottom:2px solid; border-left:2px solid; }
-  .corner.br{ bottom:10px; right:10px; border-bottom:2px solid; border-right:2px solid; }
 
-  #preview{ display:block; width:100%; height:auto; max-height:70vh; object-fit:contain; background:#000; }
+  .corner.tl{
+    top:10px;
+    left:10px;
+    border-top:2px solid;
+    border-left:2px solid;
+  }
+
+  .corner.tr{
+    top:10px;
+    right:10px;
+    border-top:2px solid;
+    border-right:2px solid;
+  }
+
+  .corner.bl{
+    bottom:10px;
+    left:10px;
+    border-bottom:2px solid;
+    border-left:2px solid;
+  }
+
+  .corner.br{
+    bottom:10px;
+    right:10px;
+    border-bottom:2px solid;
+    border-right:2px solid;
+  }
+
+  #preview{
+    display:block;
+    width:100%;
+    height:auto;
+    max-height:70vh;
+    object-fit:contain;
+    background:#000;
+  }
 
   .rec-tag{
-    position:absolute; top:14px; left:44px; z-index:3;
-    font-family:var(--mono); font-size:11px; letter-spacing:.16em; color:var(--paper);
-    background:rgba(0,0,0,0.45); padding:4px 8px; display:flex; align-items:center; gap:6px;
+    position:absolute;
+    top:14px;
+    left:44px;
+    z-index:3;
+    max-width:calc(100% - 88px);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.16em;
+    color:var(--paper);
+    background:rgba(0,0,0,.45);
+    padding:4px 8px;
+    display:flex;
+    align-items:center;
+    gap:6px;
   }
-  .rec-tag::before{ content:''; width:6px; height:6px; border-radius:50%; background:var(--red); }
+
+  .rec-tag::before{
+    content:'';
+    flex:0 0 auto;
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:var(--red);
+  }
 
   /* bottom watermark bar mimicking camera EXIF strip */
   .watermark{
-    display:flex; justify-content:space-between; align-items:flex-end; gap:16px;
-    background:var(--paper); color:var(--ink); padding:14px 20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:16px;
+    background:var(--paper);
+    color:var(--ink);
+    padding:14px 20px;
     border-top:1px solid rgba(0,0,0,.06);
     flex-wrap:wrap;
   }
-  .watermark .settings{ font-family:var(--mono); font-size:15px; font-weight:700; letter-spacing:.02em; }
-  .watermark .date{ font-family:var(--mono); font-size:11px; color:#6b6355; margin-top:2px; }
-  .watermark .brand{ text-align:right; }
-  .watermark .brand .make{ font-family:var(--disp); font-weight:700; font-size:16px; letter-spacing:.03em; text-transform:uppercase; }
-  .watermark .brand .model{ font-family:var(--mono); font-size:11px; color:#6b6355; }
+
+  .watermark .settings{
+    font-family:var(--mono);
+    font-size:15px;
+    font-weight:700;
+    letter-spacing:.02em;
+  }
+
+  .watermark .date{
+    font-family:var(--mono);
+    font-size:11px;
+    color:#6b6355;
+    margin-top:2px;
+  }
+
+  .watermark .brand{
+    text-align:right;
+  }
+
+  .watermark .brand .make{
+    font-family:var(--disp);
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+  }
+
+  .watermark .brand .model{
+    font-family:var(--mono);
+    font-size:11px;
+    color:#6b6355;
+  }
 
   /* data readout grid */
   .readout{
-    margin-top:26px; border:1px solid var(--line);
+    margin-top:26px;
+    border:1px solid var(--line);
   }
-  .readout .head{
-    display:flex; justify-content:space-between; align-items:center;
-    padding:14px 18px; border-bottom:1px solid var(--line);
-  }
-  .readout .head .t{ font-family:var(--disp); font-size:14px; letter-spacing:.18em; text-transform:uppercase; color:var(--amber); }
-  .readout .head .count{ font-family:var(--mono); font-size:11px; color:var(--paper-dim); }
 
-  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); }
-  .cell{
-    padding:16px 18px; border-right:1px solid var(--line); border-bottom:1px solid var(--line);
+  .readout .head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    padding:14px 18px;
+    border-bottom:1px solid var(--line);
   }
-  .cell .k{ font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--amber-dim); margin-bottom:6px; }
-  .cell .v{ font-family:var(--mono); font-size:14px; color:var(--paper); word-break:break-word; }
+
+  .readout .head .t{
+    font-family:var(--disp);
+    font-size:14px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--amber);
+  }
+
+  .readout .head .count{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--paper-dim);
+    white-space:nowrap;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  }
+
+  .cell{
+    min-width:0;
+    padding:16px 18px;
+    border-right:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+
+  .cell .k{
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--amber-dim);
+    margin-bottom:6px;
+  }
+
+  .cell .v{
+    font-family:var(--mono);
+    font-size:14px;
+    color:var(--paper);
+    word-break:break-word;
+    white-space:pre-wrap;
+  }
 
   .empty-note{
-    padding:26px 18px; font-family:var(--mono); font-size:13px; color:var(--paper-dim); line-height:1.7;
+    grid-column:1 / -1;
+    padding:26px 18px;
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--paper-dim);
+    line-height:1.7;
   }
 
-  .actions{ display:flex; gap:12px; margin-top:22px; flex-wrap:wrap; }
+  .actions{
+    display:flex;
+    gap:12px;
+    margin-top:22px;
+    flex-wrap:wrap;
+  }
+
   .btn{
-    font-family:var(--mono); font-size:12px; letter-spacing:.1em; text-transform:uppercase;
-    padding:11px 18px; border:1px solid var(--paper); background:transparent; color:var(--paper);
-    cursor:pointer; transition:all .15s ease;
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    padding:11px 18px;
+    border:1px solid var(--paper);
+    background:transparent;
+    color:var(--paper);
+    cursor:pointer;
+    transition:all .15s ease;
   }
-  .btn:hover{ background:var(--paper); color:var(--ink); }
-  .btn.primary{ border-color:var(--amber); color:var(--amber); }
-  .btn.primary:hover{ background:var(--amber); color:var(--ink); }
 
-  footer{ margin-top:60px; font-family:var(--mono); font-size:11px; color:var(--paper-dim); letter-spacing:.05em; }
+  .btn:hover:not(:disabled){
+    background:var(--paper);
+    color:var(--ink);
+  }
 
-  @media (prefers-reduced-motion: reduce){
-    .eyebrow::before{ animation:none; }
-    .drop .ring .blade{ transition:none; }
+  .btn.primary{
+    border-color:var(--amber);
+    color:var(--amber);
+  }
+
+  .btn.primary:hover:not(:disabled){
+    background:var(--amber);
+    color:var(--ink);
+  }
+
+  footer{
+    margin-top:60px;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--paper-dim);
+    letter-spacing:.05em;
+    line-height:1.7;
+  }
+
+  @media (max-width:640px){
+    .wrap{
+      padding:40px 20px 80px;
+    }
+
+    .drop{
+      padding:56px 18px;
+    }
+
+    .watermark{
+      align-items:flex-start;
+    }
+
+    .watermark .brand{
+      width:100%;
+      text-align:left;
+    }
+
+    .actions{
+      display:grid;
+      grid-template-columns:1fr;
+    }
+
+    .btn{
+      width:100%;
+    }
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .eyebrow::before{
+      animation:none;
+    }
+
+    .drop .ring .blade{
+      transition:none;
+    }
   }
 </style>
 </head>
+
 <body>
 
 <div class="sprockets left" id="sprocketsLeft"></div>
@@ -181,15 +512,18 @@
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">EXIF READER · NO UPLOAD, 100% ON‑DEVICE</div>
+    <div class="eyebrow">EXIF READER · NO UPLOAD, 100% ON-DEVICE</div>
     <h1>사진 속에 숨은<br><em>기록</em>을 꺼내다</h1>
-    <p class="sub">사진 한 장을 넣으면 카메라 기종, 렌즈, 조리개, 셔터스피드, 촬영 일시 같은 EXIF 메타데이터를 워터마크 스타일로 보여줍니다. 모든 처리는 브라우저 안에서만 일어나고, 서버로는 아무것도 전송되지 않습니다.</p>
+    <p class="sub">
+      사진 한 장을 넣으면 카메라 기종, 렌즈, 조리개, 셔터스피드, 촬영 일시 같은 EXIF 메타데이터를 워터마크 스타일로 보여줍니다.
+      모든 처리는 브라우저 안에서만 일어나고, 서버로는 아무것도 전송되지 않습니다.
+    </p>
   </header>
 
   <div class="stage">
-    <div class="drop" id="drop">
+    <div class="drop" id="drop" role="button" tabindex="0" aria-label="사진 선택">
       <div class="ring">
-        <svg viewBox="0 0 74 74" fill="none">
+        <svg viewBox="0 0 74 74" fill="none" aria-hidden="true">
           <circle cx="37" cy="37" r="35" stroke="#8a6229" stroke-width="1"/>
           <g class="blade">
             <path d="M37 37 L37 8 A29 29 0 0 1 61 22 Z" fill="#e0983a" opacity="0.85"/>
@@ -202,9 +536,14 @@
           <circle cx="37" cy="37" r="6" fill="#151412"/>
         </svg>
       </div>
+
       <div class="label">사진을 여기에 올려두세요</div>
-      <div class="hint">탭해서 선택 · JPG / HEIC 권장 (스크린샷·편집된 파일은 EXIF가 없을 수 있어요)</div>
-      <input type="file" id="fileInput" accept="image/*">
+      <div class="hint">
+        탭해서 선택 · JPG 권장<br>
+        HEIC는 브라우저에 따라 미리보기 또는 저장이 되지 않을 수 있어요.
+      </div>
+
+      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*">
     </div>
   </div>
 
@@ -214,13 +553,17 @@
       <div class="corner tr"></div>
       <div class="corner bl"></div>
       <div class="corner br"></div>
+
       <div class="rec-tag" id="fileTag">IMG</div>
-      <img id="preview" alt="uploaded preview">
+
+      <img id="preview" alt="선택한 사진 미리보기">
+
       <div class="watermark" id="watermark" style="display:none;">
         <div>
           <div class="settings" id="wmSettings">—</div>
           <div class="date" id="wmDate">—</div>
         </div>
+
         <div class="brand">
           <div class="make" id="wmMake">—</div>
           <div class="model" id="wmModel">—</div>
@@ -233,30 +576,24 @@
         <div class="t">전체 메타데이터</div>
         <div class="count" id="tagCount">0 tags</div>
       </div>
+
       <div class="grid" id="grid"></div>
     </div>
 
     <div class="actions">
-      <button class="btn primary" id="btnAnother">다른 사진 넣기</button>
-      <button class="btn" id="btnCopy">JSON 복사</button>
+      <button class="btn primary" id="btnDownload" type="button">EXIF 사진 저장</button>
+      <button class="btn" id="btnAnother" type="button">다른 사진 넣기</button>
+      <button class="btn" id="btnCopy" type="button">JSON 복사</button>
     </div>
   </div>
 
-  <footer>모든 분석은 이 기기에서만 실행됩니다 · 이미지와 메타데이터는 어디에도 저장되거나 전송되지 않습니다.</footer>
+  <footer>
+    모든 분석은 이 기기에서만 실행됩니다 · 이미지와 메타데이터는 어디에도 저장되거나 전송되지 않습니다.<br>
+    “EXIF 사진 저장”은 원본 파일 내부의 메타데이터를 바꾸는 기능이 아니라, 사진 아래에 촬영 정보 바를 붙인 새 JPG를 만듭니다.
+  </footer>
 </div>
 
 <script>
-  // sprocket holes
-  ['sprocketsLeft','sprocketsRight'].forEach(id=>{
-    const el = document.getElementById(id);
-    const n = Math.ceil(window.innerHeight/30)+2;
-    for(let i=0;i<n;i++){
-      const s = document.createElement('span');
-      s.style.top = (i*30+10)+'px';
-      el.appendChild(s);
-    }
-  });
-
   const drop = document.getElementById('drop');
   const fileInput = document.getElementById('fileInput');
   const frame = document.getElementById('frame');
@@ -269,122 +606,633 @@
   const wmMake = document.getElementById('wmMake');
   const wmModel = document.getElementById('wmModel');
   const fileTag = document.getElementById('fileTag');
+  const btnDownload = document.getElementById('btnDownload');
+  const btnAnother = document.getElementById('btnAnother');
+  const btnCopy = document.getElementById('btnCopy');
+
   let lastTags = null;
+  let currentFile = null;
+  let currentImageUrl = null;
 
-  drop.addEventListener('click', ()=> fileInput.click());
-  ['dragover','dragenter'].forEach(evt=>{
-    drop.addEventListener(evt, e=>{ e.preventDefault(); drop.classList.add('hover'); });
-  });
-  ['dragleave','drop'].forEach(evt=>{
-    drop.addEventListener(evt, e=>{ e.preventDefault(); drop.classList.remove('hover'); });
-  });
-  drop.addEventListener('drop', e=>{
-    const f = e.dataTransfer.files[0];
-    if(f) handleFile(f);
-  });
-  fileInput.addEventListener('change', e=>{
-    const f = e.target.files[0];
-    if(f) handleFile(f);
-  });
+  buildSprockets();
+  bindEvents();
 
-  document.getElementById('btnAnother').addEventListener('click', ()=>{
+  function buildSprockets(){
+    ['sprocketsLeft','sprocketsRight'].forEach(id => {
+      const el = document.getElementById(id);
+      const n = Math.ceil(window.innerHeight / 30) + 2;
+
+      for(let i = 0; i < n; i++){
+        const s = document.createElement('span');
+        s.style.top = (i * 30 + 10) + 'px';
+        el.appendChild(s);
+      }
+    });
+  }
+
+  function bindEvents(){
+    drop.addEventListener('click', () => fileInput.click());
+
+    drop.addEventListener('keydown', event => {
+      if(event.key === 'Enter' || event.key === ' '){
+        event.preventDefault();
+        fileInput.click();
+      }
+    });
+
+    ['dragover','dragenter'].forEach(evt => {
+      drop.addEventListener(evt, event => {
+        event.preventDefault();
+        drop.classList.add('hover');
+      });
+    });
+
+    ['dragleave','drop'].forEach(evt => {
+      drop.addEventListener(evt, event => {
+        event.preventDefault();
+        drop.classList.remove('hover');
+      });
+    });
+
+    drop.addEventListener('drop', event => {
+      const file = event.dataTransfer.files[0];
+      if(file) handleFile(file);
+    });
+
+    fileInput.addEventListener('change', event => {
+      const file = event.target.files[0];
+      if(file) handleFile(file);
+    });
+
+    btnAnother.addEventListener('click', resetViewer);
+    btnCopy.addEventListener('click', copyExifJson);
+    btnDownload.addEventListener('click', handleDownload);
+  }
+
+  function resetViewer(){
     fileInput.value = '';
     frame.classList.remove('active');
-    window.scrollTo({top:0, behavior:'smooth'});
-  });
+    lastTags = null;
+    currentFile = null;
 
-  document.getElementById('btnCopy').addEventListener('click', ()=>{
-    if(!lastTags) return;
-    navigator.clipboard.writeText(JSON.stringify(lastTags, null, 2)).then(()=>{
-      const btn = document.getElementById('btnCopy');
-      const old = btn.textContent;
-      btn.textContent = '복사됨 ✓';
-      setTimeout(()=> btn.textContent = old, 1400);
+    if(currentImageUrl){
+      URL.revokeObjectURL(currentImageUrl);
+      currentImageUrl = null;
+    }
+
+    preview.removeAttribute('src');
+    grid.innerHTML = '';
+    watermark.style.display = 'none';
+    tagCount.textContent = '0 tags';
+
+    window.scrollTo({
+      top:0,
+      behavior:'smooth'
     });
-  });
+  }
+
+  async function copyExifJson(){
+    if(!lastTags){
+      alert('복사할 EXIF 정보가 없습니다.');
+      return;
+    }
+
+    try{
+      await navigator.clipboard.writeText(
+        JSON.stringify(lastTags, null, 2)
+      );
+
+      const oldText = btnCopy.textContent;
+      btnCopy.textContent = '복사됨 ✓';
+
+      setTimeout(() => {
+        btnCopy.textContent = oldText;
+      }, 1400);
+    }catch(error){
+      console.error(error);
+      alert('클립보드 복사에 실패했습니다.');
+    }
+  }
 
   function fmtDate(str){
     if(!str) return null;
-    // EXIF format: "YYYY:MM:DD HH:MM:SS"
-    const m = String(str).match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
-    if(!m) return str;
-    return `${m[1]}/${m[2]}/${m[3]} ${m[4]}:${m[5]}:${m[6]}`;
+
+    const match = String(str).match(
+      /(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/
+    );
+
+    if(!match) return String(str);
+
+    return `${match[1]}/${match[2]}/${match[3]} ${match[4]}:${match[5]}:${match[6]}`;
   }
 
-  function fracShutter(v){
-    if(v === undefined || v === null) return null;
-    if(v >= 1) return v.toFixed(v % 1 === 0 ? 0 : 1) + 's';
-    const denom = Math.round(1/v);
-    return `1/${denom}s`;
+  function fracShutter(value){
+    const number = numericExifValue(value);
+
+    if(number === null || number <= 0){
+      return null;
+    }
+
+    if(number >= 1){
+      return number.toFixed(
+        Number.isInteger(number) ? 0 : 1
+      ) + 's';
+    }
+
+    return `1/${Math.round(1 / number)}s`;
   }
 
   function handleFile(file){
-    if(!file.type.startsWith('image/')){
+    if(!file || !file.type.startsWith('image/')){
       alert('이미지 파일만 지원합니다.');
       return;
     }
-    const url = URL.createObjectURL(file);
-    preview.src = url;
-    fileTag.textContent = file.name.length > 22 ? file.name.slice(0,19)+'…' : file.name;
+
+    currentFile = file;
+    lastTags = null;
+
+    if(currentImageUrl){
+      URL.revokeObjectURL(currentImageUrl);
+    }
+
+    currentImageUrl = URL.createObjectURL(file);
+
+    preview.onload = () => {
+      preview.onload = null;
+    };
+
+    preview.onerror = () => {
+      preview.onerror = null;
+      alert('이 브라우저에서 사진 미리보기를 불러오지 못했습니다. JPG 파일로 다시 시도해주세요.');
+    };
+
+    preview.src = currentImageUrl;
+
+    fileTag.textContent =
+      file.name.length > 22
+        ? file.name.slice(0, 19) + '…'
+        : file.name;
+
     frame.classList.add('active');
     grid.innerHTML = '';
     watermark.style.display = 'none';
     tagCount.textContent = '분석 중…';
 
-    frame.scrollIntoView({behavior:'smooth', block:'start'});
+    frame.scrollIntoView({
+      behavior:'smooth',
+      block:'start'
+    });
 
     EXIF.getData(file, function(){
-      const tags = EXIF.getAllTags(this);
+      const tags = EXIF.getAllTags(this) || {};
       lastTags = tags;
       renderTags(tags);
     });
   }
 
   function renderTags(tags){
-    const keys = Object.keys(tags).filter(k => k !== 'thumbnail' && k !== 'MakerNote' && k !== 'UserComment');
+    const keys = Object.keys(tags).filter(
+      key =>
+        key !== 'thumbnail' &&
+        key !== 'MakerNote' &&
+        key !== 'UserComment'
+    );
+
     tagCount.textContent = keys.length + ' tags';
 
     if(keys.length === 0){
       grid.innerHTML = '';
+
       const note = document.createElement('div');
       note.className = 'empty-note';
-      note.textContent = '이 이미지에서는 EXIF 메타데이터를 찾지 못했어요. 스크린샷이거나, 메신저·SNS를 거치며 메타데이터가 지워진 파일일 가능성이 높습니다. 카메라나 스마트폰 원본 파일을 올려보세요.';
+      note.textContent =
+        '이 이미지에서는 EXIF 메타데이터를 찾지 못했어요. 스크린샷이거나, 메신저·SNS를 거치며 메타데이터가 지워진 파일일 가능성이 높습니다. 카메라나 스마트폰 원본 JPG 파일을 올려보세요.';
+
       grid.appendChild(note);
+      watermark.style.display = 'none';
       return;
     }
 
-    // watermark bar
     const iso = tags.ISOSpeedRatings;
-    const focal = tags.FocalLength;
-    const fnum = tags.FNumber;
-    const exposure = tags.ExposureTime;
+    const focal = numericExifValue(tags.FocalLength);
+    const fnum = numericExifValue(tags.FNumber);
+    const shutter = fracShutter(tags.ExposureTime);
+
     const parts = [];
+
     if(iso) parts.push('ISO' + iso);
-    if(focal) parts.push(Math.round(focal) + 'mm');
-    if(fnum) parts.push('F' + fnum);
-    const shutter = fracShutter(exposure);
+    if(focal !== null) parts.push(formatExifNumber(focal) + 'mm');
+    if(fnum !== null) parts.push('F' + formatExifNumber(fnum));
     if(shutter) parts.push(shutter);
 
-    if(parts.length){
-      wmSettings.textContent = parts.join(' ');
-      wmDate.textContent = fmtDate(tags.DateTimeOriginal || tags.DateTime) || '';
-      wmMake.textContent = tags.Make || '';
-      wmModel.textContent = tags.Model || '';
-      watermark.style.display = 'flex';
-    }
+    wmSettings.textContent =
+      parts.length > 0
+        ? parts.join(' ')
+        : 'EXIF DATA';
+
+    wmDate.textContent =
+      fmtDate(tags.DateTimeOriginal || tags.DateTime) || '';
+
+    wmMake.textContent =
+      cleanExifText(tags.Make) || '';
+
+    wmModel.textContent =
+      cleanExifText(tags.Model) || '';
+
+    watermark.style.display = 'flex';
 
     grid.innerHTML = '';
-    keys.sort().forEach(k=>{
-      let v = tags[k];
-      if(v && v.numerator !== undefined) v = (v.numerator / v.denominator);
-      if(Array.isArray(v)) v = v.join(', ');
-      if(typeof v === 'number') v = Math.round(v*1000)/1000;
+
+    keys.sort().forEach(key => {
       const cell = document.createElement('div');
+      const keyEl = document.createElement('div');
+      const valueEl = document.createElement('div');
+
       cell.className = 'cell';
-      cell.innerHTML = `<div class="k">${k}</div><div class="v">${v}</div>`;
+      keyEl.className = 'k';
+      valueEl.className = 'v';
+
+      keyEl.textContent = key;
+      valueEl.textContent = normalizeDisplayValue(tags[key]);
+
+      cell.appendChild(keyEl);
+      cell.appendChild(valueEl);
       grid.appendChild(cell);
     });
   }
+
+  function normalizeDisplayValue(value){
+    if(value === undefined || value === null){
+      return '';
+    }
+
+    if(
+      typeof value === 'object' &&
+      value.numerator !== undefined &&
+      value.denominator
+    ){
+      return String(
+        Math.round((value.numerator / value.denominator) * 1000) / 1000
+      );
+    }
+
+    if(Array.isArray(value)){
+      return value.join(', ');
+    }
+
+    if(typeof value === 'number'){
+      return String(Math.round(value * 1000) / 1000);
+    }
+
+    return cleanExifText(value);
+  }
+
+  async function handleDownload(){
+    if(!currentFile){
+      alert('먼저 사진을 선택해주세요.');
+      return;
+    }
+
+    if(lastTags === null){
+      alert('EXIF 정보를 아직 분석하고 있습니다. 잠시 후 다시 눌러주세요.');
+      return;
+    }
+
+    const originalText = btnDownload.textContent;
+    btnDownload.disabled = true;
+    btnDownload.textContent = '사진 만드는 중…';
+
+    try{
+      await document.fonts.ready;
+      await downloadExifImage();
+
+      btnDownload.textContent = '저장 완료 ✓';
+
+      setTimeout(() => {
+        btnDownload.textContent = originalText;
+      }, 1600);
+    }catch(error){
+      console.error(error);
+      alert(
+        '사진 저장에 실패했습니다. JPG 파일로 다시 시도해주세요. HEIC 파일은 브라우저에 따라 지원되지 않을 수 있습니다.'
+      );
+      btnDownload.textContent = originalText;
+    }finally{
+      btnDownload.disabled = false;
+    }
+  }
+
+  async function downloadExifImage(){
+    const image = await loadImageFromFile(currentFile);
+
+    const originalWidth = image.naturalWidth || image.width;
+    const originalHeight = image.naturalHeight || image.height;
+
+    if(!originalWidth || !originalHeight){
+      throw new Error('이미지 크기를 확인할 수 없습니다.');
+    }
+
+    /*
+      모바일 브라우저의 캔버스 메모리 오류를 줄이기 위해
+      긴 변을 최대 5000px로 제한합니다.
+    */
+    const maxDimension = 5000;
+    const scale = Math.min(
+      1,
+      maxDimension / Math.max(originalWidth, originalHeight)
+    );
+
+    const imageWidth = Math.max(1, Math.round(originalWidth * scale));
+    const imageHeight = Math.max(1, Math.round(originalHeight * scale));
+
+    const barHeight = Math.max(
+      170,
+      Math.min(360, Math.round(imageWidth * 0.13))
+    );
+
+    const canvas = document.createElement('canvas');
+    canvas.width = imageWidth;
+    canvas.height = imageHeight + barHeight;
+
+    const ctx = canvas.getContext('2d');
+
+    if(!ctx){
+      throw new Error('Canvas를 사용할 수 없습니다.');
+    }
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.drawImage(
+      image,
+      0,
+      0,
+      imageWidth,
+      imageHeight
+    );
+
+    ctx.fillStyle = '#f1ebdd';
+    ctx.fillRect(
+      0,
+      imageHeight,
+      imageWidth,
+      barHeight
+    );
+
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(
+      0,
+      imageHeight,
+      imageWidth,
+      Math.max(1, Math.round(imageWidth / 1800))
+    );
+
+    const tags = lastTags || {};
+
+    const iso = tags.ISOSpeedRatings;
+    const focalLength = numericExifValue(tags.FocalLength);
+    const aperture = numericExifValue(tags.FNumber);
+    const shutter = fracShutter(tags.ExposureTime);
+
+    const settings = [];
+
+    if(iso) settings.push(`ISO${iso}`);
+    if(focalLength !== null) settings.push(`${formatExifNumber(focalLength)}mm`);
+    if(aperture !== null) settings.push(`F${formatExifNumber(aperture)}`);
+    if(shutter) settings.push(shutter);
+
+    const settingsText =
+      settings.length > 0
+        ? settings.join('  ')
+        : 'EXIF DATA NOT FOUND';
+
+    const dateText =
+      fmtDate(tags.DateTimeOriginal || tags.DateTime) || '';
+
+    const makeText =
+      cleanExifText(tags.Make).toUpperCase();
+
+    const modelText =
+      cleanExifText(tags.Model);
+
+    const horizontalPadding = Math.max(
+      30,
+      Math.round(imageWidth * .038)
+    );
+
+    const settingsFontSize = Math.max(
+      26,
+      Math.round(barHeight * .22)
+    );
+
+    const secondaryFontSize = Math.max(
+      18,
+      Math.round(barHeight * .13)
+    );
+
+    const brandFontSize = Math.max(
+      26,
+      Math.round(barHeight * .22)
+    );
+
+    const topY =
+      imageHeight + Math.round(barHeight * .43);
+
+    const bottomY =
+      imageHeight + Math.round(barHeight * .72);
+
+    ctx.textBaseline = 'alphabetic';
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#151412';
+    ctx.font = `700 ${settingsFontSize}px "Space Mono", monospace`;
+
+    ctx.fillText(
+      fitCanvasText(
+        ctx,
+        settingsText,
+        imageWidth * .57
+      ),
+      horizontalPadding,
+      topY
+    );
+
+    ctx.fillStyle = '#6b6355';
+    ctx.font = `400 ${secondaryFontSize}px "Space Mono", monospace`;
+
+    ctx.fillText(
+      fitCanvasText(
+        ctx,
+        dateText,
+        imageWidth * .57
+      ),
+      horizontalPadding,
+      bottomY
+    );
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#151412';
+    ctx.font = `700 ${brandFontSize}px Oswald, sans-serif`;
+
+    ctx.fillText(
+      fitCanvasText(
+        ctx,
+        makeText,
+        imageWidth * .34
+      ),
+      imageWidth - horizontalPadding,
+      topY
+    );
+
+    ctx.fillStyle = '#6b6355';
+    ctx.font = `400 ${secondaryFontSize}px "Space Mono", monospace`;
+
+    ctx.fillText(
+      fitCanvasText(
+        ctx,
+        modelText,
+        imageWidth * .36
+      ),
+      imageWidth - horizontalPadding,
+      bottomY
+    );
+
+    const blob = await canvasToBlob(
+      canvas,
+      'image/jpeg',
+      .95
+    );
+
+    triggerDownload(
+      blob,
+      createDownloadFileName(currentFile.name)
+    );
+  }
+
+  function loadImageFromFile(file){
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      const url = URL.createObjectURL(file);
+
+      image.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(image);
+      };
+
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('이미지를 불러오지 못했습니다.'));
+      };
+
+      image.src = url;
+    });
+  }
+
+  function numericExifValue(value){
+    if(value === undefined || value === null){
+      return null;
+    }
+
+    if(
+      typeof value === 'object' &&
+      value.numerator !== undefined &&
+      value.denominator
+    ){
+      const result = value.numerator / value.denominator;
+      return Number.isFinite(result) ? result : null;
+    }
+
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function formatExifNumber(value){
+    if(!Number.isFinite(value)){
+      return '';
+    }
+
+    if(Number.isInteger(value)){
+      return String(value);
+    }
+
+    return String(Math.round(value * 10) / 10);
+  }
+
+  function cleanExifText(value){
+    if(value === undefined || value === null){
+      return '';
+    }
+
+    return String(value)
+      .replace(/\u0000/g, '')
+      .trim();
+  }
+
+  function fitCanvasText(ctx, text, maxWidth){
+    if(!text){
+      return '';
+    }
+
+    if(ctx.measureText(text).width <= maxWidth){
+      return text;
+    }
+
+    let shortened = text;
+
+    while(
+      shortened.length > 1 &&
+      ctx.measureText(shortened + '…').width > maxWidth
+    ){
+      shortened = shortened.slice(0, -1);
+    }
+
+    return shortened + '…';
+  }
+
+  function canvasToBlob(canvas, type, quality){
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        blob => {
+          if(blob){
+            resolve(blob);
+          }else{
+            reject(new Error('이미지 파일 생성에 실패했습니다.'));
+          }
+        },
+        type,
+        quality
+      );
+    });
+  }
+
+  function triggerDownload(blob, fileName){
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = downloadUrl;
+    link.download = fileName;
+    link.rel = 'noopener';
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => {
+      URL.revokeObjectURL(downloadUrl);
+    }, 1500);
+  }
+
+  function createDownloadFileName(originalName){
+    const baseName = originalName
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[\\/:*?"<>|]/g, '_');
+
+    return `${baseName}_exif.jpg`;
+  }
 </script>
+
 </body>
 </html>
